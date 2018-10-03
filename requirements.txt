@@ -1,5 +1,5 @@
 numpy
-matplotlib==2.1.0
+matplotlib
 six
 pytest
 pylint

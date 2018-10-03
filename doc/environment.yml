@@ -1,5 +1,6 @@
 name: splinart
 dependencies:
+  - python3.6
   - notebook
   - sphinx
   - nbsphinx
