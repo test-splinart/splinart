@@ -1,0 +1,6 @@
+name: splinart
+channels:
+  - test-splinart
+dependencies:
+  - python=3.6
+  - splinart
