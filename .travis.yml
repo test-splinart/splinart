@@ -1,21 +1,61 @@
 language: python
-
+env:
+  matrix:
+  - PYVER="2.7"
+  - PYVER="3.4"
+  - PYVER="3.5"
+  - PYVER="3.6"
+  global:
+  - secure: YVhvPluNxPU7SjIKoIgwrEWaUPm+NPb/CgyGQ3RwonvdOgbzz2G5EgUV5vJRMGBLhuMC8CyuTQQ7yEZT1F+K+nLQ1dQeLjrBAnhaawWOyOM2Kt904UxP7FRMvRk4Re71mPPGcf6dzCrjbIXJ7gQvIWkEFp2dlmPr0sWqo81H64pA7sRfpDNRXD9Nj5Wb0KFMnhbgvcOGFc78t+ksOJs2WswfHSCCWpQvSM+Zz2cgv1ja8qwt94s9D1oSRcFds34nf2LFpyp4hn3qngwDlKlLG0QNWxbgZ25PUEKm46p8voGtBZB1d1WnhobTBraNVol3txl+VnbH8O6qKadvMwd5e+A3oD1AwCsZ8H+OG+S8s9gW0yXcW0YmJenc1bxaunMkpdRWjeXlfzVfLoq1KEF9ISacxWTf2BnNnUfkd0iifE0WSr3yzho6bX+cmG7O13GjaES1jU+B65b6mBS69pYyo1YSKRs4QOHV+/2YXf+ExUtn2Y2AYApophMY+nlnfd1yoUJh15J9YWsdx8sdeGjgUac0Ci73LAUdxYhr9hrC2GlKWug9ejpOr8fczUwOUrabb/H0y+2KykEylx5Ta77w85n9xXU6yhLbTMZt9gh5MdXTJXR+eGiELexyjY+HwM37fmHYu90gA0CExBZLRhJkhV++VAQ+lo/hEIO/NcMPf/0=
+  - secure: IrTcSOgOTzysD1YrJNSHYO72urvysyyxUYSsHFfd2LwfZC4BUWMTfsYmq26RY+FWYDLLbISexX+9HCQ9hjSK4T+STh+uM0LiES720Z+orDd7qgGG21KMMHesjnawrBPuPUecwh7ud1LFamkwnKg+yNJCALmAmg0ZOrWJ841q5zW0saOc/Z8Ik3htThBynDPxQRZCpgFgxLACMa0mljzdvL2hNpX+zLpiERUvnUx6mtuaMRrmd5ecjhkG/0xmSaMIgN89RSMXYK3CyGURQXtD+RhP8LWkhvHdgX4uhoJfTNv6EfFXOyNPyJOgWn5zGsD07Y3lUTVRGVrW85eJOwN0O7i+XpStr9AiPCyPdjajHymNZCfcPhnt55+SmScScUe6nYMdWnR+cd834r2is6OSS83K044FNv4+dHQ6a6g19cgvDyuZdNfbYjExlP4y/V+PajFJl8n6fG6ozwwwSF51RJoGfULAXUPQRH5VL5CncZgQXLHLZNtMk/zKF2Y2Mj/0noW1lmvMILRaQRQEkoi9nAXm3nbGIazY/rH5yubt2rFc/97plXePU/7VgMk4pRZUS+ez/wppryrSu7r3HrIUXw5VTOs+oR2Wlk2tmfmaMgfJdjMpGwSHApWMOXnrMdXJUzlPYFm5U92UjTz38RhSIPOSZTrKR1tdU/Q7Rez07k4=
+  - PROJECT_NAME=splinart
+  - GITHUB_REPO_NAME=test-splinart/splinart
+os:
+- linux
+- osx
+before_install:
+- "if [[ \"$TRAVIS_OS_NAME\" == \"osx\" ]]; then \n  wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+  -O miniconda.sh;\n  mkdir .matplotlib;\n  echo \"backend : TkAgg\" >> .matplotlib/matplotlibrc\nfi\n"
+- "if [[ \"$TRAVIS_OS_NAME\" == \"linux\" ]]; then \n  sudo apt-get update;\n  wget
+  https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;\nfi
+  \ \n"
 install:
-  - sudo apt-get update
-  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-  - bash miniconda.sh -b -p $HOME/miniconda
-  - export PATH="$HOME/miniconda/bin:$PATH"
-  - hash -r
-  - conda config --set always_yes yes --set changeps1 no
-  - conda update -q conda
-  # Useful for debugging any issues with conda
-  - conda info -a
-
-  - conda create -q -n splinart-env python=$TRAVIS_PYTHON_VERSION
-  - source activate splinart-env
-  - travis wait pip install -r requirements.txt
-  - python setup.py install
-
+- bash miniconda.sh -b -p $HOME/miniconda
+- export PATH="$HOME/miniconda/bin:$PATH"
+- hash -r
+- conda config --set always_yes yes --set changeps1 no
+- conda update -q conda
+- conda info -a
+- conda create -q -n splinart-env python=$PYVER
+- source activate splinart-env
+- travis_wait pip install -r requirements.txt
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then conda install python.app; fi;
+- python setup.py install
 script:
-  # Your test script goes here
-  - pytest tests
+- pytest --pylint --pylint-rcfile=.pyrcfile --pylint-error-types=EF splinart
+- pytest --cov=splinart tests
+- |
+  if [[ $TRAVIS_TAG ]]; then
+    python setup.py sdist;
+    conda build -q --python ${PYVER} recipes &&
+    conda install --use-local ${PROJECT_NAME} &&
+    conda uninstall ${PROJECT_NAME};
+  fi
+after_success:
+- codecov -e $PYVER
+deploy:
+- provider: pypi
+  skip_cleanup: true
+  user: gouarin
+  password: "${PYPI_PASSWD}"
+  server: https://test.pypi.org/legacy/
+  on:
+    repo: "${GITHUB_REPO_NAME}"
+    tags: true
+    condition: "$PYVER == 2.7 && $TRAVIS_OS_NAME == linux"
+- provider: script
+  skip_cleanup: true
+  script: anaconda -t $ANACONDA_TOKEN upload --force ${HOME}/miniconda/conda-bld/*/${PROJECT_NAME}-*.tar.bz2
+  on:
+    repo: "${GITHUB_REPO_NAME}"
+    tags: true
